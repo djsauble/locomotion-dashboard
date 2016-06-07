@@ -66,9 +66,36 @@ $(function() {
 
     runs.fetch().then(function() {
       console.log("App is loaded with " + runs.length + " records");
+      var missingDistance = [];
       runs.each(function(r) {
-        console.log(r.attributes);
+        if (!r.get('distance')) {
+          console.log("Missing distance! " + r.get('timestamp'));
+          missingDistance.push({
+            id: r.get('_id'),
+            rev: r.get('_rev')
+          });
+        }
       });
+      if (missingDistance.length > 0) {
+        localDB.bulkGet({docs: missingDistance, attachments: true}).then(function(results) {
+          var docs = results.results.map(function(r) {
+            return r.docs[0].ok;
+          });
+          docs.forEach(function(d) {
+            var data = getRun(d),
+                filtered = defaultFilter(data),
+                coords = getCoordinates(filtered),
+                model = runs.get(d._id);
+
+            model.save('distance', computeDistance(coords));
+          });
+          localDB.replicate.to(remoteDB).on('complete', function() {
+            console.log("Yay, we're done!");
+          }).on('error', function(err) {
+            console.log(err);
+          });
+        });
+      }
     });
   }
 });
