@@ -1,10 +1,43 @@
-$(function() {
+$(function(exports) {
   // Globals
   //var user     = 'ckinamistiongedenterattl';
   //var password = '9047d84b808fe51b65ff94624f80acf8f55fcd63';
-  var database = 'be7b25ca3682ef8a15682f791c6110648152d7e4',
+  var ns = "Forrest",
+      database = 'be7b25ca3682ef8a15682f791c6110648152d7e4',
       remoteDB = new PouchDB('http://127.0.0.1:5984/' + database),
-      localDB = new PouchDB(database);
+      localDB = new PouchDB(database),
+      Run = Backbone.Model.extend({
+        defaults: function() {
+          return {
+            _id: null,
+            _rev: null,
+            timestamp: null,
+            created_by: null,
+            distance: null
+          }
+        }
+      }),
+      Runs = Backbone.Collection.extend({
+        model: Run,
+        pouch: {
+          options: {
+            query: {
+              include_docs: true,
+              fun: {
+                map: function(doc, emit) {
+                  emit(doc.timestamp, null);
+                }
+              }
+            }
+          }
+        },
+        parse: function(result) {
+          return _.pluck(result.rows, 'doc').map(function(d) {
+            d.timestamp = new Date(d.timestamp);
+            return d;
+          });
+        }
+      });
 
   // Rework the default syncing behavior for compatibility with PouchDB 
   Backbone.sync = BackbonePouch.sync({
@@ -28,41 +61,17 @@ $(function() {
     init();
   });
 
+  // Export api to the namespace
+  exports[ns] = {
+    Run: Run,
+    Runs: Runs,
+    db: localDB,
+    runs: null // This will be instantiated once the data has loaded
+  }
+
   // Call this once data is loaded into the app
   function init() {
-    var Run = Backbone.Model.extend({
-          defaults: function() {
-            return {
-              _id: null,
-              _rev: null,
-              timestamp: null,
-              created_by: null,
-              distance: null
-            }
-          }
-        }),
-        Runs = Backbone.Collection.extend({
-          model: Run,
-          pouch: {
-            options: {
-              query: {
-                include_docs: true,
-                fun: {
-                  map: function(doc, emit) {
-                    emit(doc.timestamp, null);
-                  }
-                }
-              }
-            }
-          },
-          parse: function(result) {
-            return _.pluck(result.rows, 'doc').map(function(d) {
-              d.timestamp = new Date(d.timestamp);
-              return d;
-            });
-          }
-        }),
-        runs = new Runs;
+    runs = new Runs;
 
     runs.fetch().then(function() {
       console.log("App is loaded with " + runs.length + " records");
@@ -97,6 +106,9 @@ $(function() {
           });
         });
       }
+
+      // Export run collection to the namespace
+      exports[ns].runs = runs;
     });
   }
-});
+}(typeof exports === 'undefined' ? window : exports));
