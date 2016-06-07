@@ -1,9 +1,9 @@
 $(function() {
   // Globals
-  var user     = 'ckinamistiongedenterattl',
-      password = '9047d84b808fe51b65ff94624f80acf8f55fcd63',
-      database = 'be7b25ca3682ef8a15682f791c6110648152d7e4',
-      remoteDB = new PouchDB('https://' + user + ':' + password + '@djsauble.cloudant.com/' + database),
+  //var user     = 'ckinamistiongedenterattl';
+  //var password = '9047d84b808fe51b65ff94624f80acf8f55fcd63';
+  var database = 'be7b25ca3682ef8a15682f791c6110648152d7e4',
+      remoteDB = new PouchDB('http://127.0.0.1:5984/' + database),
       localDB = new PouchDB(database);
 
   // Rework the default syncing behavior for compatibility with PouchDB 
@@ -87,7 +87,8 @@ $(function() {
                 coords = getCoordinates(filtered),
                 model = runs.get(d._id);
 
-            model.save('distance', computeDistance(coords));
+            model.set('distance', computeDistance(coords));
+            model.save();
           });
           localDB.replicate.to(remoteDB).on('complete', function() {
             console.log("Yay, we're done!");
