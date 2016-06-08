@@ -77,10 +77,10 @@
       });
 
   // Export run collection to the namespace
-  exports[ns] = {
+  exports[ns] = _.extend(exports[ns] || {}, {
     runs: new Runs,
     init: init
-  }
+  });
 
   // Call this once data is loaded into the app
   function init(options) {

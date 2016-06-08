@@ -1,11 +1,13 @@
 $(function() {
   // Events
-  Forrest.runs.on({
+  Forrest.runs.once({
     "sync": function(collection) {
       console.log("App is loaded with " + collection.length + " records");
     },
     "processed": function(collection, count) {
-      console.log(count + " missing attributes calculated");
+      if (count > 0) {
+        console.log(count + " missing attributes calculated");
+      }
     }
   });
 
