@@ -48,7 +48,7 @@
                 });
 
                 if (missingDistance.length > 0) {
-                  localDB.bulkGet({docs: missingDistance, attachments: true}).then(function(results) {
+                  exports[ns].localDB.bulkGet({docs: missingDistance, attachments: true}).then(function(results) {
                     var docs = results.results.map(function(r) {
                       return r.docs[0].ok;
                     });
@@ -60,7 +60,7 @@
 
                       model.save('distance', computeDistance(coords));
                     });
-                    localDB.replicate.to(remoteDB).on('complete', function() {
+                    exports[ns].localDB.replicate.to(exports[ns].remoteDB).on('complete', function() {
                       resolve(missingDistance.length);
                     });
                   });
@@ -84,13 +84,16 @@
 
   // Call this once data is loaded into the app
   function init(options) {
-    var runs = exports[ns].runs,
-        remoteDB = new PouchDB(options.host + '/' + options.db),
-        localDB = new PouchDB(options.db);
+    var runs = exports[ns].runs;
+
+    exports[ns] = _.extend(exports[ns] || {}, {
+      remoteDB: new PouchDB(options.host + '/' + options.db),
+      localDB: new PouchDB(options.db)
+    });
 
     // Rework the default syncing behavior for compatibility with PouchDB 
     Backbone.sync = BackbonePouch.sync({
-      db: localDB,
+      db: exports[ns].localDB,
       fetch: 'query',
       options: {
         query: {
@@ -100,13 +103,7 @@
     });
     Backbone.Model.prototype.idAttribute = '_id';
 
-    localDB.allDocs().then(function(results) {
-      // Populate the local database with data if empty
-      if (results.total_rows == 0) {
-        return PouchDB.replicate(remoteDB, localDB);
-      }
-      return new Promise(function(resolve) { resolve(); });
-    }).then(function() {
+    PouchDB.replicate(exports[ns].remoteDB, exports[ns].localDB).then(function() {
       // Fetch and parse data from PouchDB
       return runs.fetch();
     }).then(function() {
