@@ -7,9 +7,6 @@ $(function(exports) {
           this.miles_this_week = this.$("#this_week .miles");
           this.trend_this_week = this.$("#this_week .trend");
           this.goal_this_week = this.$("#this_week .goal");
-          this.miles_this_month = this.$("#this_month .miles");
-          this.trend_this_month = this.$("#this_month .trend");
-          this.goal_this_month = this.$("#this_month .goal");
           this.chart = this.$("#chart");
 
           this.listenToOnce(Forrest.runs, "processed", this.render);
@@ -26,21 +23,13 @@ $(function(exports) {
               startOfToday,
               startOfThisWeek,
               startOfLastWeek, 
-              startOfThisMonth,
-              startOfLastMonth,
               runsByWeek = [],
               runsThisWeek = [],
               runsLastWeek = [],
-              runsThisMonth = [],
-              runsLastMonth = [];
               distanceThisWeek = 0,
               distanceLastWeek = 0,
-              distanceThisMonth = 0,
-              distanceLastMonth = 0,
-              percentChangeWoW = 0,
-              percentChangeMoM = 0,
+              percentChange = 0,
               remainingGoalThisWeek = 0,
-              remainingGoalThisMonth = 0,
               weekdayNameMapping = [
                 [0, 'Sunday', '#990033'],
                 [1, 'Monday', '#000051'],
@@ -78,14 +67,6 @@ $(function(exports) {
           // Start of last week
           startOfLastWeek = new Date(startOfThisWeek - weekInMs);
 
-          // Start of this month
-          startOfThisMonth = new Date(startOfToday);
-          startOfThisMonth.setDate(1);
-
-          // Start of last month
-          startOfLastMonth = new Date(startOfThisMonth);
-          startOfLastMonth.setMonth(startOfThisMonth.getMonth() - 1);
-          
           // Compile data for different time ranges
           Forrest.runs.each(function(e) {
             var t = e.get('timestamp');
@@ -101,62 +82,40 @@ $(function(exports) {
               runsLastWeek.push(e);
               distanceLastWeek += e.getMileage();
             }
-
-            // This month
-            if (t >= startOfThisMonth) {
-              runsThisMonth.push(e);
-              distanceThisMonth += e.getMileage();
-            }
-
-            // Last month
-            if (t >= startOfLastMonth && t < startOfThisMonth) {
-              runsLastMonth.push(e);
-              distanceLastMonth += e.getMileage();
-            }
           });
 
           // Normalize distances to single decimal precision
           distanceThisWeek = Math.round(distanceThisWeek * 10) / 10;
           distanceLastWeek = Math.round(distanceLastWeek * 10) / 10;
-          distanceThisMonth = Math.round(distanceThisMonth * 10) / 10;
-          distanceLastMonth = Math.round(distanceLastMonth * 10) / 10;
 
           // Calculate trending data
-          percentChangeWoW = Math.round(
+          percentChange = Math.round(
             ((distanceThisWeek / distanceLastWeek) - 1) * 100
-          );
-          percentChangeMoM = Math.round(
-            ((distanceThisMonth / distanceLastMonth) - 1) * 100
           );
 
           // Calculate goals
-          remainingGoalThisWeek =
-            Math.round(10 * ((1.1 * distanceLastWeek) - distanceThisWeek)) / 10;
-          remainingGoalThisMonth =
-            Math.round(10 * ((1.1 * distanceLastMonth) - distanceThisMonth)) / 10;
+          remainingGoalThisWeek = Math.round(10 * ((1.1 * distanceLastWeek) - distanceThisWeek)) / 10;
 
           // Display distance data
-          this.miles_this_week.html(distanceThisWeek + " miles");
-          this.miles_this_month.html(distanceThisMonth + " miles");
+          this.miles_this_week.html(distanceThisWeek + " miles run");
 
           // Display trending data
-          this.trend_this_week.html(percentChangeWoW + "% WoW");
-          this.trend_this_month.html(percentChangeMoM + "% MoM");
+          if (percentChange > 0) {
+            this.trend_this_week.html(percentChange + "% more than last week");
+          }
+          else if (percentChange < 0) {
+            this.trend_this_week.html(Math.abs(percentChange) + "% less than last week");
+          }
+          else {
+            this.trend_this_week.html("Same mileage as last week.");
+          }
 
           // Display goal data for the week
           if (remainingGoalThisWeek > 0) {
-            this.goal_this_week.html(remainingGoalThisWeek + " miles to go");
+            this.goal_this_week.html(remainingGoalThisWeek + " miles to go (" + (Math.round(remainingGoalThisWeek / (7 - startOfToday.getDay()) * 10) / 10) + " mi/day)");
           }
           else {
             this.goal_this_week.html("Met goal!");
-          }
-
-          // Display goal data for the month
-          if (remainingGoalThisMonth > 0) {
-            this.goal_this_month.html(remainingGoalThisMonth + " miles to go");
-          }
-          else {
-            this.goal_this_month.html("Met goal!");
           }
 
           // Start of first day in the database
