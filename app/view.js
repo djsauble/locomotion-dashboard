@@ -4,66 +4,132 @@ $(function(exports) {
         el: $("#forrest"),
 
         initialize: function() {
-          this.loading = this.$("#loading");
-          this.run_count = this.$("#run_count");
-          this.total_mileage = this.$("#total_mileage");
-          this.last_30_days = this.$("#last_30_days");
-          this.trend = this.$("#trend");
-          this.last_run = this.$("#last_run");
+          this.miles_this_week = this.$("#this_week .miles");
+          this.trend_this_week = this.$("#this_week .trend");
+          this.goal_this_week = this.$("#this_week .goal");
+          this.miles_this_month = this.$("#this_month .miles");
+          this.trend_this_month = this.$("#this_month .trend");
+          this.goal_this_month = this.$("#this_month .goal");
           this.chart = this.$("#chart");
+
           this.listenToOnce(Forrest.runs, "processed", this.render);
         },
 
         render: function() {
-          var str,
-              distance = 0,
-              thirtyDaysAgo = new Date(new Date() - (1000*60*60*24*30)),
-              weekInMs = 1000 * 60 * 60 * 24 * 7,
-              last30days = Forrest.runs.filter(function(e) {
-                if (e.get('timestamp') >= thirtyDaysAgo) {
-                  return e;
-                }
-              });
+          var dayInMs = 1000 * 60 * 60 * 24,
+              weekInMs = dayInMs * 7,
+              now = new Date(),
+              startOfToday,
+              startOfThisWeek,
+              startOfLastWeek, 
+              startOfThisMonth,
+              startOfLastMonth,
+              runsThisWeek = [],
+              runsLastWeek = [],
+              runsThisMonth = [],
+              runsLastMonth = [];
+              distanceThisWeek = 0,
+              distanceLastWeek = 0,
+              distanceThisMonth = 0,
+              distanceLastMonth = 0,
+              percentChangeWoW = 0,
+              percentChangeMoM = 0,
+              remainingGoalThisWeek = 0,
+              remainingGoalThisMonth = 0;
 
-          // Zero the thirty days ago timestamp to midnight
-          thirtyDaysAgo.setHours(0);
-          thirtyDaysAgo.setMinutes(0);
-          thirtyDaysAgo.setSeconds(0);
-          thirtyDaysAgo.setMilliseconds(0);
+          // Start of today (normalized to midnight)
+          today = new Date(now);
+          today.setHours(0);
+          today.setMinutes(0);
+          today.setSeconds(0);
+          today.setMilliseconds(0);
 
-          // Hide the loading indicator
-          this.loading.hide();
+          // Start of this week (normalized to midnight)
+          startOfThisWeek = new Date(today - (dayInMs * today.getDay()));
 
-          // Show the total number of runs
-          str = Forrest.runs.length + " runs";
-          this.run_count.html(str);
+          // Start of last week
+          startOfLastWeek = new Date(startOfThisWeek - weekInMs);
 
-          // Show the total distance traversed
-          distance = 0;
-          Forrest.runs.each(function(r) {
-            distance += r.getMileage()
+          // Start of this month
+          startOfThisMonth = new Date(today);
+          startOfThisMonth.setDate(1);
+
+          // Start of last month
+          startOfLastMonth = new Date(startOfThisMonth);
+          startOfLastMonth.setMonth(startOfThisMonth.getMonth() - 1);
+          
+          // Compile data for different time ranges
+          Forrest.runs.each(function(e) {
+            var t = e.get('timestamp');
+
+            // This week
+            if (t >= startOfThisWeek) {
+              runsThisWeek.push(e);
+              distanceThisWeek += e.getMileage();
+            }
+
+            // Last week
+            if (t >= startOfLastWeek && t < startOfThisWeek) {
+              runsLastWeek.push(e);
+              distanceLastWeek += e.getMileage();
+            }
+
+            // This month
+            if (t >= startOfThisMonth) {
+              runsThisMonth.push(e);
+              distanceThisMonth += e.getMileage();
+            }
+
+            // Last month
+            if (t >= startOfLastMonth && t < startOfThisMonth) {
+              runsLastMonth.push(e);
+              distanceLastMonth += e.getMileage();
+            }
           });
-          str = (Math.round(distance*10) / 10) + " miles";
-          this.total_mileage.html(str);
 
-          // Show the total distance traversed in the last 30 days
-          distance = 0;
-          _.each(last30days, function(r) {
-            distance += r.getMileage();
-          });
-          str = (Math.round(distance*10) / 10) + " miles";
-          this.last_30_days.html(str);
+          // Normalize distances to single decimal precision
+          distanceThisWeek = Math.round(distanceThisWeek * 10) / 10;
+          distanceLastWeek = Math.round(distanceLastWeek * 10) / 10;
+          distanceThisMonth = Math.round(distanceThisMonth * 10) / 10;
+          distanceLastMonth = Math.round(distanceLastMonth * 10) / 10;
 
-          // Show the distance traversed on your last run
-          distance = Forrest.runs.at(Forrest.runs.length - 1).getMileage();
-          str = distance + " miles";
-          this.last_run.html(str);
+          // Calculate trending data
+          percentChangeWoW = Math.round(
+            ((distanceThisWeek / distanceLastWeek) - 1) * 100
+          );
+          percentChangeMoM = Math.round(
+            ((distanceThisMonth / distanceLastMonth) - 1) * 100
+          );
 
-          // Calculate the linear regression of the last 30 days
-          this.trend.html(Math.round(regression('linear', last30days.map(function(r) {
-              return [r.get('timestamp').getTime() / weekInMs, r.getMileage()];
-            })
-          ).equation[0] * 100) + "% WoW increase");
+          // Calculate goals
+          remainingGoalThisWeek =
+            Math.round(10 * ((1.1 * distanceLastWeek) - distanceThisWeek)) / 10;
+          remainingGoalThisMonth =
+            Math.round(10 * ((1.1 * distanceLastMonth) - distanceThisMonth)) / 10;
+
+          // Display distance data
+          this.miles_this_week.html(distanceThisWeek + " miles");
+          this.miles_this_month.html(distanceThisMonth + " miles");
+
+          // Display trending data
+          this.trend_this_week.html(percentChangeWoW + "% WoW");
+          this.trend_this_month.html(percentChangeMoM + "% MoM");
+
+          // Display goal data for the week
+          if (remainingGoalThisWeek > 0) {
+            this.goal_this_week.html(remainingGoalThisWeek + " miles to go");
+          }
+          else {
+            this.goal_this_week.html("Met goal!");
+          }
+
+          // Display goal data for the month
+          if (remainingGoalThisMonth > 0) {
+            this.goal_this_month.html(remainingGoalThisMonth + " miles to go");
+          }
+          else {
+            this.goal_this_month.html("Met goal!");
+          }
 
           // Show the chart of the last 30 days of running history
           this.chart.highcharts({

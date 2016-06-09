@@ -3,20 +3,24 @@
   height: 400px;
 }
 
-#statistics {
+.statistics {
   display: flex;
   justify-content: center;
-  align-items: baseline;
 }
 
-#statistics h1 {
+.statistics > div {
   padding-right: 1em;
 }
 
-#statistics h1:last-child {
+.statistics > div:last-child {
   padding-right: 0;
 }
 
-#statistics h3 {
+.range h2 {
+  float: left;
   padding-right: 1em;
+}
+
+.range h2:last-child {
+  padding-right: 0;
 }

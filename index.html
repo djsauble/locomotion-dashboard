@@ -5,16 +5,19 @@
     <link href="styles.css" type="text/css" rel="stylesheet"></link>
   </head>
   <body id="forrest">
-    <h1 id="loading">Loading...</h1>
-    <div id="statistics">
-      <h3>Total</h3>
-      <h1 id="run_count"></h1>
-      <h1 id="total_mileage"></h1>
-      <h3>30 days</h3>
-      <h1 id="last_30_days"></h1>
-      <h1 id="trend"></h1>
-      <h3>Last run</h3>
-      <h1 id="last_run"></h1>
+    <div class="statistics">
+      <div id="this_week" class="range">
+        <h3>This week</h3>
+        <h2 class="miles"></h2>
+        <h2 class="trend"></h2>
+        <h2 class="goal"></h2>
+      </div>
+      <div id="this_month" class="range">
+        <h3>This month</h3>
+        <h2 class="miles"></h2>
+        <h2 class="trend"></h2>
+        <h2 class="goal"></h2>
+      </div>
     </div>
     <div id="chart"></div>
 
