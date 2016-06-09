@@ -9,6 +9,9 @@
             created_by: null,
             distance: null
           }
+        },
+        getMileage: function() {
+          return Math.round(this.get('distance') / 1609.3 * 10) / 10;
         }
       }),
       Runs = Backbone.Collection.extend({

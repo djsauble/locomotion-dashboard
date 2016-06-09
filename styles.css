@@ -2,3 +2,21 @@
   width: 100%;
   height: 400px;
 }
+
+#statistics {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+}
+
+#statistics h1 {
+  padding-right: 1em;
+}
+
+#statistics h1:last-child {
+  padding-right: 0;
+}
+
+#statistics h3 {
+  padding-right: 1em;
+}

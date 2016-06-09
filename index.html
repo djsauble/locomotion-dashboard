@@ -5,7 +5,17 @@
     <link href="styles.css" type="text/css" rel="stylesheet"></link>
   </head>
   <body id="forrest">
-    <h1 id="title">Loading...</h1>
+    <h1 id="loading">Loading...</h1>
+    <div id="statistics">
+      <h3>Total</h3>
+      <h1 id="run_count"></h1>
+      <h1 id="total_mileage"></h1>
+      <h3>30 days</h3>
+      <h1 id="last_30_days"></h1>
+      <h1 id="trend"></h1>
+      <h3>Last run</h3>
+      <h1 id="last_run"></h1>
+    </div>
     <div id="chart"></div>
 
     <!-- Dependencies -->
@@ -16,11 +26,12 @@
     <script src="dist/pouchdb-5.4.0.js"></script>
     <script src="dist/backbone-pouch.js"></script>
     <script src="dist/highcharts.js"></script>
+    <script src="dist/regression.min.js"></script>
 
     <!-- Application -->
-    <script src="helpers.js"></script>
-    <script src="data.js"></script>
-    <script src="view.js"></script>
-    <script src="app.js"></script>
+    <script src="app/helpers.js"></script>
+    <script src="app/data.js"></script>
+    <script src="app/view.js"></script>
+    <script src="app/app.js"></script>
   </body>
 </html>
