@@ -19,11 +19,16 @@ $(function(exports) {
           var dayInMs = 1000 * 60 * 60 * 24,
               weekInMs = dayInMs * 7,
               now = new Date(),
+              startOfFirstDay,
+              startOfFirstWeek,
+              weekIterator,
+              nextWeekIterator,
               startOfToday,
               startOfThisWeek,
               startOfLastWeek, 
               startOfThisMonth,
               startOfLastMonth,
+              runsByWeek = [],
               runsThisWeek = [],
               runsLastWeek = [],
               runsThisMonth = [],
@@ -35,23 +40,46 @@ $(function(exports) {
               percentChangeWoW = 0,
               percentChangeMoM = 0,
               remainingGoalThisWeek = 0,
-              remainingGoalThisMonth = 0;
+              remainingGoalThisMonth = 0,
+              weekdayNameMapping = [
+                [0, 'Sunday', '#990033'],
+                [1, 'Monday', '#000051'],
+                [2, 'Tuesday', '#99006F'],
+                [3, 'Wednesday', '#00008D'],
+                [4, 'Thursday', '#9900AB'],
+                [5, 'Friday', '#0000C9'],
+                [6, 'Saturday', '#9900E7']
+              ],
+              monthNameMapping = [
+                'Jan',
+                'Feb',
+                'Mar',
+                'Apr',
+                'May',
+                'Jun',
+                'Jul',
+                'Aug',
+                'Sep',
+                'Oct',
+                'Nov',
+                'Dec'
+              ];
 
           // Start of today (normalized to midnight)
-          today = new Date(now);
-          today.setHours(0);
-          today.setMinutes(0);
-          today.setSeconds(0);
-          today.setMilliseconds(0);
+          startOfToday = new Date(now);
+          startOfToday.setHours(0);
+          startOfToday.setMinutes(0);
+          startOfToday.setSeconds(0);
+          startOfToday.setMilliseconds(0);
 
           // Start of this week (normalized to midnight)
-          startOfThisWeek = new Date(today - (dayInMs * today.getDay()));
+          startOfThisWeek = new Date(startOfToday - (dayInMs * startOfToday.getDay()));
 
           // Start of last week
           startOfLastWeek = new Date(startOfThisWeek - weekInMs);
 
           // Start of this month
-          startOfThisMonth = new Date(today);
+          startOfThisMonth = new Date(startOfToday);
           startOfThisMonth.setDate(1);
 
           // Start of last month
@@ -131,7 +159,42 @@ $(function(exports) {
             this.goal_this_month.html("Met goal!");
           }
 
-          // Show the chart of the last 30 days of running history
+          // Start of first day in the database
+          startOfFirstDay = new Date(Forrest.runs.at(0).get('timestamp'));
+          startOfFirstDay.setHours(0);
+          startOfFirstDay.setMinutes(0);
+          startOfFirstDay.setSeconds(0);
+          startOfFirstDay.setMilliseconds(0);
+
+          // Start of first week in the database
+          startOfFirstWeek = new Date(startOfFirstDay - (dayInMs * startOfFirstDay.getDay()));
+
+          // Compile weekly run data
+          weekIterator = new Date(startOfFirstWeek);
+          nextWeekIterator = new Date(weekIterator.getTime() + weekInMs);
+          var obj = {
+            weekOf: weekIterator,
+            days: [0, 0, 0, 0, 0, 0, 0]
+          };
+          for (var i = 0; i < Forrest.runs.length; ++i) {
+            var run = Forrest.runs.at(i),
+                t = run.get('timestamp');
+
+            while (t >= nextWeekIterator) {
+              weekIterator = new Date(nextWeekIterator);
+              nextWeekIterator = new Date(weekIterator.getTime() + weekInMs);
+              runsByWeek.push(obj);
+              obj = {
+                weekOf: weekIterator,
+                days: [0, 0, 0, 0, 0, 0, 0]
+              };
+            }
+
+            obj.days[t.getDay()] += run.getMileage()
+          }
+          runsByWeek.push(obj);
+
+          // Show the chart of weekly running history, stacked by weekday
           this.chart.highcharts({
             chart: {
               type: 'column'
@@ -140,25 +203,30 @@ $(function(exports) {
               text: null
             },
             xAxis: {
-              type: 'datetime',
-              title: {
-                text: 'Day'
-              }
+              type: 'category'
             },
             yAxis: {
               title: {
                 text: 'Distance'
               }
             },
-            series: [{
-              data: Forrest.runs.map(function(r) {
-                var d = r.get('timestamp');
-                return [
-                  Date.UTC(d.getYear() + 1900, d.getMonth(), d.getDate()),
-                  r.getMileage()
-                ];
-              })
-            }]
+            plotOptions: {
+              series: {
+                stacking: 'normal'
+              }
+            },
+            series: weekdayNameMapping.map(function(d) {
+              return {
+                name: d[1],
+                color: d[2],
+                data: runsByWeek.map(function(w) {
+                  return [
+                    monthNameMapping[w.weekOf.getMonth()] + ' ' + w.weekOf.getDate(),
+                    w.days[d[0]]
+                  ];
+                })
+              };
+            })
           });
           return this;
         }
