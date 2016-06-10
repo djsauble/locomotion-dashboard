@@ -30,6 +30,9 @@ $(function(exports) {
               distanceLastWeek = 0,
               percentChange = 0,
               remainingGoalThisWeek = 0,
+              actualTrendLine,
+              desiredTrendLine,
+              seriesData,
               weekdayNameMapping = [
                 [0, 'Sunday', '#990033'],
                 [1, 'Monday', '#000051'],
@@ -97,7 +100,7 @@ $(function(exports) {
           remainingGoalThisWeek = Math.round(10 * ((1.1 * distanceLastWeek) - distanceThisWeek)) / 10;
 
           // Display distance data
-          this.miles_this_week.html(distanceThisWeek + " miles run");
+          this.miles_this_week.html(distanceThisWeek + " miles this week");
 
           // Display trending data
           if (percentChange > 0) {
@@ -133,6 +136,7 @@ $(function(exports) {
           nextWeekIterator = new Date(weekIterator.getTime() + weekInMs);
           var obj = {
             weekOf: weekIterator,
+            distance: 0,
             days: [0, 0, 0, 0, 0, 0, 0]
           };
           for (var i = 0; i < Forrest.runs.length; ++i) {
@@ -145,13 +149,62 @@ $(function(exports) {
               runsByWeek.push(obj);
               obj = {
                 weekOf: weekIterator,
+                distance: 0,
                 days: [0, 0, 0, 0, 0, 0, 0]
               };
             }
 
             obj.days[t.getDay()] += run.getMileage()
+            obj.distance += run.getMileage();
           }
           runsByWeek.push(obj);
+
+          // Calculate trend lines
+          var i = 0;
+          actualTrendLine = regression('linear', runsByWeek.map(function(w) {
+            return [i++, w.distance];
+          }));
+          desiredTrendLine = [runsByWeek[0].distance];
+          for (var i = 1; i < runsByWeek.length; ++i) {
+            desiredTrendLine.push(desiredTrendLine[i - 1] * 1.1);
+          }
+
+          // Calculate series data
+          seriesData = weekdayNameMapping.map(function(d) {
+            return {
+              name: d[1],
+              color: d[2],
+              stacking: 'normal',
+              data: runsByWeek.map(function(w) {
+                return [
+                  monthNameMapping[w.weekOf.getMonth()] + ' ' + w.weekOf.getDate(),
+                  w.days[d[0]]
+                ];
+              })
+            };
+          });
+          seriesData.push({
+            name: 'Actual trend',
+            type: 'line',
+            color: '#00FF00',
+            data: runsByWeek.map(function(w) {
+              return [
+                monthNameMapping[w.weekOf.getMonth()] + ' ' + w.weekOf.getDate(),
+                actualTrendLine.points.shift()[1]
+              ];
+            })
+          });
+          seriesData.push({
+            name: 'Desired trend',
+            type: 'line',
+            color: '#FF0000',
+            data: runsByWeek.map(function(w) {
+              return [
+                monthNameMapping[w.weekOf.getMonth()] + ' ' + w.weekOf.getDate(),
+                desiredTrendLine.shift()
+              ];
+            })
+          });
 
           // Show the chart of weekly running history, stacked by weekday
           this.chart.highcharts({
@@ -169,23 +222,7 @@ $(function(exports) {
                 text: 'Distance'
               }
             },
-            plotOptions: {
-              series: {
-                stacking: 'normal'
-              }
-            },
-            series: weekdayNameMapping.map(function(d) {
-              return {
-                name: d[1],
-                color: d[2],
-                data: runsByWeek.map(function(w) {
-                  return [
-                    monthNameMapping[w.weekOf.getMonth()] + ' ' + w.weekOf.getDate(),
-                    w.days[d[0]]
-                  ];
-                })
-              };
-            })
+            series: seriesData
           });
           return this;
         }
